@@ -6,39 +6,37 @@ namespace FileFragmentation.View
     {
         public string GetParagraphInput()
         {
-            Console.WriteLine("Enter your paragraph (type END in a new line to finish):");
+            List<string> lines = new();
+            string? line;
 
-            string input = "";
+            Console.WriteLine("Enter your paragraph (type END in a new line to finish):");
             while (true)
             {
-                string? line = Console.ReadLine();
+                line = Console.ReadLine();
 
-                if (line == null) // null check (rare, happens if input stream is broken)
+                if (line == null)
                 {
-                    Console.WriteLine("?? Input was null. Please enter text or END to finish:");
-                    continue;
-                }
-
-                if (string.IsNullOrWhiteSpace(line))
-                {
-                    Console.WriteLine("?? Empty line entered. Type something or END to finish:");
+                    Console.WriteLine("?? Input is null. Please type again.");
                     continue;
                 }
 
                 if (line.Trim().Equals("END", StringComparison.OrdinalIgnoreCase))
                     break;
 
-                input += line + Environment.NewLine;
+                // Ignore completely empty lines (e.g., pressing Enter after END or multiple enters)
+                if (string.IsNullOrWhiteSpace(line))
+                    continue;
+
+                lines.Add(line);
             }
 
-            // If user never typed anything except END
-            if (string.IsNullOrWhiteSpace(input))
+            // remove trailing empty lines if any
+            while (lines.Count > 0 && string.IsNullOrWhiteSpace(lines[^1]))
             {
-                Console.WriteLine("?? No content entered. Defaulting to empty paragraph.");
-                return "";
+                lines.RemoveAt(lines.Count - 1);
             }
 
-            return input;
+            return string.Join(Environment.NewLine, lines);
         }
 
         public int GetFragmentSize()
