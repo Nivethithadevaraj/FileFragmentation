@@ -2,89 +2,100 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 
 namespace FileFragmentation.Model
 {
-	public class FileManager
-	{
-		private readonly string dataPath = Path.Combine(Directory.GetCurrentDirectory(), "Data");
-		private readonly string inputFile = "input.txt";
-		private readonly string outputFile = "output.txt";
+    public class FileManager
+    {
+        private readonly string dataPath = Path.Combine(Directory.GetCurrentDirectory(), "Data");
+        private readonly string inputFile = "input.txt";
+        private readonly string outputFile = "output.txt";
 
-		public FileManager()
-		{
-			if (!Directory.Exists(dataPath))
-				Directory.CreateDirectory(dataPath);
-		}
+        public FileManager()
+        {
+            Directory.CreateDirectory(dataPath);
+        }
 
-		public void ClearDataFolder()
-		{
-			DirectoryInfo di = new DirectoryInfo(dataPath);
-			foreach (FileInfo file in di.GetFiles())
-			{
-				file.Delete();
-			}
-		}
+        public void ClearDataFolder()
+        {
+            if (!Directory.Exists(dataPath)) return;
+            var di = new DirectoryInfo(dataPath);
+            foreach (var file in di.GetFiles()) file.Delete();
+            foreach (var dir in di.GetDirectories()) dir.Delete(true);
+        }
 
-		public void SaveInputFile(string content)
-		{
-			File.WriteAllText(Path.Combine(dataPath, inputFile), content);
-		}
+        public void SaveInputFile(string content)
+        {
+            File.WriteAllText(Path.Combine(dataPath, inputFile), content ?? string.Empty);
+        }
 
-		public void FragmentFile(int size)
-		{
-			string content = File.ReadAllText(Path.Combine(dataPath, inputFile));
+        public void FragmentFile(int size)
+        {
+            string path = Path.Combine(dataPath, inputFile);
+            string content = File.Exists(path) ? File.ReadAllText(path) : string.Empty;
 
-			int totalFiles = (int)Math.Ceiling((double)content.Length / size);
+            if (content.Length == 0)
+            {
+                File.WriteAllText(Path.Combine(dataPath, "1.txt"), string.Empty);
+                return;
+            }
 
-			int digits = totalFiles.ToString().Length; // For leading zeros
-			int index = 0;
+            int totalFiles = (int)Math.Ceiling((double)content.Length / size);
+            int digits = totalFiles.ToString().Length;
+            int index = 0;
 
-			for (int i = 0; i < totalFiles; i++)
-			{
-				string part = content.Substring(index, Math.Min(size, content.Length - index));
-				index += size;
+            for (int i = 0; i < totalFiles; i++)
+            {
+                int take = Math.Min(size, content.Length - index);
+                string part = content.Substring(index, take);
+                index += take;
+                string filename = (i + 1).ToString().PadLeft(digits, '0') + ".txt";
+                File.WriteAllText(Path.Combine(dataPath, filename), part);
+            }
+        }
 
-				string filename = (i + 1).ToString().PadLeft(digits, '0') + ".txt";
-				File.WriteAllText(Path.Combine(dataPath, filename), part);
-			}
-		}
+        public List<string> GetFragmentFiles()
+        {
+            if (!Directory.Exists(dataPath)) return new List<string>();
 
-		public List<string> GetFragmentFiles()
-		{
-			return Directory.GetFiles(dataPath, "*.txt")
-							.Where(f => !f.EndsWith(inputFile) && !f.EndsWith(outputFile))
-							.Select(Path.GetFileName)
-							.OrderBy(f => f)
-							.ToList();
-		}
+            return Directory.GetFiles(dataPath, "*.txt")
+                            .Select(Path.GetFileName)
+                            .Where(f => f != inputFile && f != outputFile)
+                            .OrderBy(f => f)
+                            .ToList()!;
+        }
 
-		public string ReadFragment(string filename)
-		{
-			string path = Path.Combine(dataPath, filename);
-			if (!File.Exists(path)) return null;
-			return File.ReadAllText(path);
-		}
+        public string? ReadFragment(string filename)
+        {
+            string path = Path.Combine(dataPath, filename);
+            return File.Exists(path) ? File.ReadAllText(path) : null;
+        }
 
-		public string Defragment()
-		{
-			var fragments = GetFragmentFiles();
-			string combined = "";
+        public string Defragment()
+        {
+            var fragments = GetFragmentFiles();
+            var sb = new StringBuilder();
 
-			foreach (string file in fragments)
-			{
-				combined += File.ReadAllText(Path.Combine(dataPath, file));
-			}
+            foreach (var file in fragments)
+                sb.Append(File.ReadAllText(Path.Combine(dataPath, file)));
 
-			File.WriteAllText(Path.Combine(dataPath, outputFile), combined);
-			return combined;
-		}
+            string combined = sb.ToString();
+            File.WriteAllText(Path.Combine(dataPath, outputFile), combined);
+            return combined;
+        }
 
-		public bool CompareFiles()
-		{
-			string inputContent = File.ReadAllText(Path.Combine(dataPath, inputFile));
-			string outputContent = File.ReadAllText(Path.Combine(dataPath, outputFile));
-			return inputContent.Equals(outputContent);
-		}
-	}
+        public bool CompareFiles()
+        {
+            string inPath = Path.Combine(dataPath, inputFile);
+            string outPath = Path.Combine(dataPath, outputFile);
+
+            if (!File.Exists(inPath) || !File.Exists(outPath)) return false;
+
+            string inputContent = File.ReadAllText(inPath);
+            string outputContent = File.ReadAllText(outPath);
+
+            return string.Equals(inputContent, outputContent, StringComparison.Ordinal);
+        }
+    }
 }

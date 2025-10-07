@@ -19,47 +19,35 @@ namespace FileFragmentation.Controller
         {
             try
             {
-                // Step 0 ? Clean Data folder before every run
                 manager.ClearDataFolder();
 
-                // Step 1 ? Input paragraph
                 string paragraph = view.GetParagraphInput();
                 manager.SaveInputFile(paragraph);
 
-                // Step 2 ? Fragmentation
                 int size = view.GetFragmentSize();
                 manager.FragmentFile(size);
                 view.DisplayFiles(manager.GetFragmentFiles());
 
-                // Step 3 ? File display option
                 while (true)
                 {
-                    bool choice = view.AskToDisplayFile();
-                    if (!choice) break;
-
+                    if (!view.AskToDisplayFile()) break;
                     string filename = view.GetFileName();
-                    string content = manager.ReadFragment(filename);
-                    if (content == null)
-                        view.ShowMessage("? File does not exist.");
-                    else
-                        view.ShowMessage($"Content of {filename}: \n{content}");
+                    string? content = manager.ReadFragment(filename);
+                    view.ShowFileContent(filename, content);
                 }
 
-                // Step 4 ? Defragmentation
                 string defragmented = manager.Defragment();
-                view.ShowMessage("\n?? Defragmented content:");
+                view.ShowMessage("\nDefragmented content:", ConsoleColor.Cyan);
                 Console.WriteLine(defragmented);
 
-                // Step 5 ? Compare
                 if (manager.CompareFiles())
-                    view.ShowMessage("\n? SUCCESS: Input and Output are the same!");
+                    view.ShowMessage("\n SUCCESS: Input and Output are the same!", ConsoleColor.Green);
                 else
-                    view.ShowMessage("\n? Something went wrong. Files do not match.");
-
+                    view.ShowMessage("\n Files do not match.", ConsoleColor.Red);
             }
             catch (Exception ex)
             {
-                view.ShowMessage($"?? Error: {ex.Message}");
+                view.ShowMessage($" Error: {ex.Message}", ConsoleColor.Red);
             }
         }
     }
